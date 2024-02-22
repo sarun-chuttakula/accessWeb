@@ -14,35 +14,56 @@ def update_csv():
         uuid, status_code, urls = row
         options = Options()
         options.add_argument('--disable-dev-shm-usage')
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-
-        # Initialize updated_status as success
+        retry_limit = 5  # Maximum number of retry attempts
+        retry_count = 0
+        
         updated_status = status_code
+        driver = None
 
-        for url in urls.split(','):
+        while retry_count < retry_limit:
             try:
-                driver.get(url.strip())
-                current_status = driver.execute_script("""
-                    var xhr = new XMLHttpRequest();
-                    xhr.open("GET", window.location.href, false);
-                    xhr.send(null);
-                    return xhr.status;
-                """)
-
-                # If any URL's status is not 200 or 201, update updated_status
-                if current_status not in [200, 201]:
-                    updated_status = current_status
-                    break
+                driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+                for url in urls.split(','):
+                    try:
+                        driver.get(url.strip())
+                        current_status = driver.execute_script("""
+                            var xhr = new XMLHttpRequest();
+                            xhr.open("GET", window.location.href, false);
+                            xhr.send(null);
+                            return xhr.status;
+                        """)
+                        if current_status not in [200, 201]:
+                            updated_status = current_status
+                            break
+                    except Exception as e:
+                        logging.error(f"Error occurred while processing URL: {url.strip()}. Error: {e}")
+                break  # If successful, exit the loop
             except Exception as e:
-                logging.error(f"Error occurred while processing URL: {url.strip()}. Error: {e}")
+                retry_count += 1
+                logging.error(f"Error occurred while initializing WebDriver: {e}")
+            finally:
+                if driver:
+                    driver.quit()
 
-        # Close the driver
-        driver.quit()
+        if retry_count == retry_limit:
+            # If all retry attempts failed, save the URL to a new CSV file
+            save_to_failed_csv(row)
+            return [uuid, status_code, urls, "Retry limit reached"]
 
         return [uuid, status_code, urls, updated_status]
 
+    def save_to_failed_csv(row):
+        failed_csv_file = '/home/xelpmoc/Documents/Codes/accessWeb/data/failed_urls.csv'
+        try:
+            with open(failed_csv_file, 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(row)
+            logging.info(f"URLs that failed after retry attempts saved to: {failed_csv_file}")
+        except Exception as e:
+            logging.error(f"Error occurred while writing to failed URLs CSV file: {failed_csv_file}. Error: {e}")
+
     # Read URLs from CSV file
-    csv_file = '/home/xelpmoc/Documents/Code/accessweb/data/jobs.csv'
+    csv_file = '/home/xelpmoc/Documents/Codes/accessWeb/data/jobs.csv'
     try:
         with open(csv_file, 'r') as file:
             reader = csv.reader(file)
