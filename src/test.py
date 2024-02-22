@@ -11,15 +11,24 @@ def check_website_content(url):
     # options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    
 
     driver.get(url)
     print(f"Title of {url}: {driver.title}")
     # You can add your content checking logic here
 
+    status_code_script = """
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", window.location.href, false);
+    xhr.send(null);
+    return xhr.status;
+    """
+    status_code = driver.execute_script(status_code_script)
+    print(f"Status code of {url}: {status_code}")
     driver.quit()
 
 # List of websites
-websites = ["https://python.org", "https://www.wikipedia.org", "https://www.bbc.com", "https://www.reddit.com", "https://www.google.com","https://dejobs.org/san-antonio-tx/administrative-assistant-fuels-regulatory-compliance/3CB4D6E9C345476DA87D3F9F7D519E4E/job/"]
+websites = ["https://dejobs.org/mumbai-ind/senior-rd-associate-cti/9686A3A1326340C6A6DEAF42E7DD6ADE/job/"]
 
 # Create threads for each website
 threads = []
