@@ -1,14 +1,10 @@
 import csv
-import logging
 import concurrent.futures
 from tqdm import tqdm
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
 
 def check_website(row):
     uuid, status_code, urls = row
@@ -63,13 +59,10 @@ def save_to_failed_csv(row):
 
 # Read URLs from CSV file
 csv_file = '/home/xelpmoc/Documents/Codes/accessWeb/data/jobs.csv'
-try:
-    with open(csv_file, 'r') as file:
-        reader = csv.reader(file)
-        header = next(reader)  # Get header
-        rows = list(reader)
-except Exception as e:
-    logging.error(f"Error occurred while reading CSV file: {csv_file}. Error: {e}")
+with open(csv_file, 'r') as file:
+    reader = csv.reader(file)
+    header = next(reader)  # Get header
+    rows = list(reader)
 
 # List to store updated rows
 updated_rows = []
@@ -84,7 +77,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                 updated_rows.append(future.result())
                 progress_bar.update(1)  # Update progress bar for each completed row
         except KeyboardInterrupt:
-            logging.info("Interrupted by user. Writing updated data to CSV...")
+            print("Interrupted by user. Writing updated data to CSV...")
             # Cancel remaining futures
             for future in futures:
                 future.cancel()
@@ -96,11 +89,9 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
 header.append('updated_status_code')
 
 # Write updated data back to the CSV file
-try:
-    with open(csv_file, 'w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(header)  # Write updated header
-        writer.writerows(updated_rows)  # Write updated rows
-    logging.info("CSV file updated successfully.")
-except Exception as e:
-    logging.error(f"Error occurred while writing to CSV file: {csv_file}. Error: {e}")
+with open(csv_file, 'w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(header)  # Write updated header
+    writer.writerows(updated_rows)  # Write updated rows
+
+print("CSV file updated successfully.")
