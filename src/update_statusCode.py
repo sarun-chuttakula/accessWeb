@@ -4,12 +4,13 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+import time
 
 # Function to check website content and status code
 def check_website(row, results):
     uuid, status_code, urls = row
     options = Options()
-    # options.add_argument('--headless')
+    options.add_argument('--headless')
     # options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
@@ -18,18 +19,28 @@ def check_website(row, results):
     updated_status = status_code
 
     for url in urls.split(','):
-        driver.get(url.strip())
-        current_status = driver.execute_script("""
-            var xhr = new XMLHttpRequest();
-            xhr.open("GET", window.location.href, false);
-            xhr.send(null);
-            return xhr.status;
-        """)
+        retry_count = 5
+        while retry_count > 0:
+            driver.get(url.strip())
+            current_status = driver.execute_script("""
+                var xhr = new XMLHttpRequest();
+                xhr.open("GET", window.location.href, false);
+                xhr.send(null);
+                return xhr.status;
+            """)
+            # If any URL's status is not 200 or 201, update updated_status
+            if current_status in [200, 201]:
+                break
+            else:
+                retry_count -= 1
+                time.sleep(1)  # Wait for 1 second before retrying
 
-        # If any URL's status is not 200 or 201, update updated_status
-        if current_status not in [200, 201]:
-            updated_status = current_status
-            break
+        if retry_count == 0:  # If all retries failed
+            updated_status = "Failed"
+            # Write the failed URL to a separate CSV file
+            with open('failed.csv', 'a', newline='') as failed_file:
+                failed_writer = csv.writer(failed_file)
+                failed_writer.writerow([uuid, url.strip()])
 
     # Append result to results list
     results.append([uuid, status_code, urls, updated_status])
@@ -38,7 +49,7 @@ def check_website(row, results):
     driver.quit()
 
 # Read URLs from CSV file
-csv_file = '/home/xelpmoc/Documents/Code/accessweb/data/jobs.csv'
+csv_file = '/home/xelpmoc/Documents/Codes/accessWeb/data/jobs.csv'
 with open(csv_file, 'r') as file:
     reader = csv.reader(file)
     header = next(reader)  # Get header
