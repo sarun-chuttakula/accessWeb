@@ -1,0 +1,21 @@
+
+# IDEs
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Python-specific files
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+/venv
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
